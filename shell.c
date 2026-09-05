@@ -4,6 +4,7 @@
 #include <string.h>
 #include <sys/wait.h>
 #include <signal.h>
+#include <errno.h>
 
 void managment_SIGCHILD(int s){
         //SIGCHILD = signal sent to a parent process when a child process stops, continues, or terminates
@@ -68,13 +69,19 @@ int main(){
                 if(p == 0){
                         execvp(args[0], args);//este proceso no crea otro hijo como en system
                         //remplaza la imagen del proceso por otro proceso
-                }else{
+			perror("execvp: ");
+			exit(1);
+                }if(p > 0){
                         if(is_background == 1){
                                 printf("Background process [PID] == %d\n",p);
                         }else{
-                                waitpid(p, NULL, 0);
+                    		if(waitpid(p, NULL, 0) < 0 && errno != ECHILD){
+					perror("waitpid");
+				}
                         }
-                }
+                } else{
+			perror("fork");
+		}
                 //agregamos un wait porque el padre no estaba esperando al hijo
                 //wait(NULL);
         }
