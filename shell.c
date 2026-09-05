@@ -20,8 +20,14 @@ void inicializador_managment(void){
         sa.sa_flags = SA_RESTART;               //Reinicia la interrupcion de sistema
         sigaction(SIGCHLD,&sa,NULL);            //
 }
+
+void handler_SIGINT(int signum){
+	printf("\n");
+}
+
 int main(){
         inicializador_managment();
+	signal(SIGINT, handler_SIGINT);
         char cmd[80];
         char *args[10];//manipularemos este para evitar problemas de memoria por la modificacion de strtok
         int p;
