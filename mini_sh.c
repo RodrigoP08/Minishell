@@ -64,7 +64,7 @@ int tokenizador(char *linea, char *tokens[]){
                         //mientras no lleguemos al fin ni a la comilla que cierra, seguimos avanzando
                         while(*p != '\0' && *p != comilla) 
                                 p++;
-                        if(*p != '\0'){
+                        if(*p != '\0'){ //llegamos a la comilla, marcamos que ahi termina este token
                                 *p = '\0';
                                 p++;
                         }
@@ -74,14 +74,14 @@ int tokenizador(char *linea, char *tokens[]){
                         tokens[cont++] = p;
                         while(*p != '\0' && *p != ' ' && *p != '\t' && *p != ',')
                                 p++;
-                        if(*p != '\0'){
+                        if(*p != '\0'){ //se separo por espacio, tabulacion, coma> otro token
                                 *p = '\0';
                                 p++;
                         }
                 }
         }
 
-        tokens[cont] = NULL;                   //marcamos el final de los tokens
+        tokens[cont] = NULL;                   //marcamos el final de los tokens en nuestro array
         return cont;
 }
 
@@ -89,12 +89,13 @@ int tokenizador(char *linea, char *tokens[]){
 void handler_redireccion(char *args[]){
         for(int i =0; args[i]!=NULL; i++){
                 if(strcmp(args[i], ">") == 0){
-                        int fd = open(args[i+1], O_WRONLY | O_CREAT | O_TRUNC, 0644);
+                        //open devuelve un file descriptor y se indica que solo lectura, que si no existe lo cree o que si existe elimine su contenido, con permisos 644
+                        int fd = open(args[i+1], O_WRONLY | O_CREAT | O_TRUNC, 0644); 
                         if(fd < 0){
                                 perror("open >");
                                 exit(1);
                         }
-                        dup2(fd, STDOUT_FILENO);
+                        dup2(fd, STDOUT_FILENO); //cambiamos para q la salida sea en el archivo y no en pantalla
                         close(fd);
                         args[i] = NULL;
                         break;
@@ -133,11 +134,12 @@ int pipeline(char *args_left[], char *args_right[], int is_background){
                 return -1;
         }
 
-        pid_t p1 = fork();
-        if(p1 == 0){
+        int p1 = fork();
+        //la salida de p1 sera la entrada de p2
+        if(p1 == 0){                                    
                 signal(SIGINT, SIG_DFL);
                 close(pipefd[0]);                       //cierra lectura
-                dup2(pipefd[1], STDOUT_FILENO);         //redirige salida hacia el pipe
+                dup2(pipefd[1], STDOUT_FILENO);         //redirige salida hacia el pipe en lugar de la pantalla
                 close(pipefd[1]);
                 handler_redireccion(args_left);
                 execvp(args_left[0], args_left);
@@ -145,7 +147,8 @@ int pipeline(char *args_left[], char *args_right[], int is_background){
                 exit(1);
         }
 
-        pid_t p2 = fork();
+        int p2 = fork();
+        //la entrada de p2 sera la salida de p1
         if(p2 == 0){
                 signal(SIGINT, SIG_DFL);
                 close(pipefd[1]);                       //cierra escritura
@@ -172,6 +175,7 @@ int pipeline(char *args_left[], char *args_right[], int is_background){
 }
 
 int main(){
+        setpgid(0,0);
         inicializador_managment();		//Inicializar la funcion para zombies
 	signal(SIGINT, handler_SIGINT);		//Inicializar para CTRL+C
 
@@ -179,8 +183,6 @@ int main(){
         char *args[20];				//manipularemos este para evitar problemas de memoria por la modificacion de strtok
         int p;					//pid
 
-
-        char delim[] = " ,\t";			//delimitadores para el shell [con strtok]
         int is_background, i;			//bandera background	| indice de tokens
 
         while(1){
@@ -192,23 +194,15 @@ int main(){
 
                 if(strcmp(cmd,"exit") == 0){
 			//salir del shell
+                        signal(SIGTERM, SIG_IGN);       //el shell se ignora a si mismo
+                        kill(0, SIGTERM);               //mata el propio grupo
                         break;
                 }
 
                 int cant_tokens = tokenizador(cmd, args);
                 if(!cant_tokens) continue;      //linea vacia
 
-                /*
-                i= 0;
-		
-		//separamos las palabras problemas al compilar en un punto
-                args[i] = strtok(cmd, delim);		
-                
-		while(args[i] != NULL){
-                        args[++i]  = strtok(NULL, delim);
-                }
-                */
-
+        
                 is_background = 0;
                 if(strcmp(args[cant_tokens - 1],"&") == 0){
                         //& handle for background task
