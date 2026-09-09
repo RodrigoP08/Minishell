@@ -177,7 +177,7 @@ int pipeline(char *args_left[], char *args_right[], int is_background){
 int main(){
         setpgid(0,0);
         inicializador_managment();		//Inicializar la funcion para zombies
-	signal(SIGINT, handler_SIGINT);		//Inicializar para CTRL+C
+		signal(SIGINT, handler_SIGINT);		//Inicializar para CTRL+C
 
         char cmd[80];				//Lo recibido por el usuario
         char *args[20];				//manipularemos este para evitar problemas de memoria por la modificacion de strtok
@@ -193,7 +193,7 @@ int main(){
                 cmd[strcspn(cmd,"\r\n")] = '\0';	//Eliminar saltos de linea
 
                 if(strcmp(cmd,"exit") == 0){
-			//salir del shell
+						//salir del shell
                         signal(SIGTERM, SIG_IGN);       //el shell se ignora a si mismo
                         kill(0, SIGTERM);               //mata el propio grupo
                         break;
@@ -250,10 +250,10 @@ int main(){
                         handler_redireccion(args);      //manejamos redirecciones antes de continuar
 
                         execvp(args[0], args);		//este proceso no crea otro hijo como en system
-				                        //remplaza la imagen del proceso por otro proceso
-			//error
-			perror("execvp: ");
-			exit(1);
+				                        			//remplaza la imagen del proceso por otro proceso
+						//error
+						perror("execvp: ");
+						exit(1);
 
                 }if(p > 0){	
                         if(is_background == 1){
@@ -265,10 +265,9 @@ int main(){
 				}
                         }
                 } else{
-			perror("fork");
-		}
-                //agregamos un wait porque el padre no estaba esperando al hijo
-                //wait(NULL);
+					perror("fork");
+				}
         }
         printf("Fin de la sesion \n");
 }
+
